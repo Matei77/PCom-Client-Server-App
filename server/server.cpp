@@ -279,7 +279,11 @@ void Server::ProcessClientRequest(pollfd poll_fd) {
 }
 
 void Server::ExitServer() {
-	// TODO: close connections
+	// close connections
+	for (auto poll_fd : poll_fds) {
+		if (poll_fd.fd >= 0)
+			close(poll_fd.fd);
+	}
 }
 
 pair<string, User> Server::FindUserByFd(int fd) {
