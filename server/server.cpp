@@ -136,17 +136,20 @@ void Server::ProcessNewTcpConnection() {
 		User user = users_database.find(client_id)->second;
 
 		if (user.IsOnline()) {
-			// client is online
+			// client exists and is online
 			printf("Client %s already connected.\n", client_id);
+			
+			return;
 
 		} else {
-			// client is offline
-			printf("New client %s connected from %s:%d.\n", client_id,
-					inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
-			
+			// client exists but is offline
+
 			// update user's online status
 			user.SetOnline(true);
 			user.SetFd(client_fd);
+
+			// reconnect user
+			user.ReconnectUser();
 		}
 
 	} else {
@@ -154,6 +157,10 @@ void Server::ProcessNewTcpConnection() {
 		User user(client_fd, true);
 		users_database.insert({client_id, user});
 	}
+
+	// show message for new and reconnected users
+	printf("New client %s connected from %s:%d.\n", client_id,
+			inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
 }
 
 void Server::ProcessUdpData() {
