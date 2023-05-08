@@ -1,4 +1,4 @@
-// Copyright: Ionescu Matei-Stefan - 323CAb - 2022-2023
+// Copyright Ionescu Matei-Stefan - 323CAb - 2022-2023
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
