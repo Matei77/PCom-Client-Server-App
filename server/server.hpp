@@ -11,7 +11,10 @@
 #include "user.hpp"
 
 #define MAX_LISTEN_QUEUE 32
-#define MAX_CLIENT_ID_LEN 11
+#define MAX_CLIENT_ID_LEN 10
+#define MAX_BUFF_SIZE 1551
+#define MAX_TOPIC_SIZE 50
+#define MAX_USER_COMMAND_SIZE 65
 #define EXIT_COMMAND "exit"
 
 using namespace std;
@@ -46,6 +49,17 @@ class Server {
 
 		// process a new tcp connection
 		void ProcessNewTcpConnection();
+
+		// process the data received from a udp connection
+		void ProcessUdpData();
+
+		// process commands given to the server by stdin.
+		// returns 1 if the server should stop
+		bool ProcessStdinCommand();
+
+		void ProcessClientRequest(pollfd poll_fd);
+
+		pair<string, User> FindUserByFd(int fd);
 
 		// close the server
 		void ExitServer();
