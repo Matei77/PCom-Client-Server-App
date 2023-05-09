@@ -5,6 +5,11 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+int recv_all(int sockfd, void *buffer);
+
+int send_all(int sockfd, void *buffer, uint32_t len);
 
 // macro for handling error codes
 #define DIE(assertion, call_description)                                       \

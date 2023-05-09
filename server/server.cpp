@@ -127,7 +127,7 @@ void Server::ProcessNewTcpConnection() {
 
 	// receive client id
 	string client_id;
-	rc = recv(client_fd, &client_id, MAX_CLIENT_ID_LEN, 0);
+	rc = recv_all(client_fd, &client_id[0]);
 
 	// check if client_id already exists
 	if (users_database.count(client_id)) {
@@ -248,7 +248,7 @@ void Server::ProcessClientRequest(pollfd poll_fd) {
 
 	pair<string, User> user = FindUserByFd(poll_fd.fd);
 
-	rc = recv(poll_fd.fd, &buffer, MAX_USER_COMMAND_SIZE, 0);
+	rc = recv_all(poll_fd.fd, &buffer[0]);
 	DIE (rc < 0, "recv tcp client");
 
 	buffer.resize(rc);
@@ -270,7 +270,7 @@ void Server::ProcessClientRequest(pollfd poll_fd) {
 	if (buffer[0] == 's') {
 		// subscribe user to topic
 		string topic = buffer.substr(1, rc - 2);
-		bool sf = buffer[rc - 1];
+		bool sf = atoi(&buffer[rc - 1]);
 
 		// ? --------->>>>> needs Setter?
 		user.second.GetSubbedTopic().insert({topic, sf});

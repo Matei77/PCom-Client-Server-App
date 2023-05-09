@@ -11,7 +11,7 @@ void User::NotifyUser(string topic, string message) {
 	if (subbed_topics.count(topic)) {
 		if (online) {
 			// if the user is online send the message
-			int rc = send(fd, message.data(), message.size(), 0);
+			int rc = send_all(fd, &message[0], message.size());
 			DIE(rc < 0, "send");
 
 		} else if ((*subbed_topics.find(topic)).second) {
@@ -19,5 +19,14 @@ void User::NotifyUser(string topic, string message) {
 			// store the message
 			queued_messages.push(message);
 		}
+	}
+}
+
+void User::ReconnectUser() {
+	while (!queued_messages.empty()) {
+		string message = queued_messages.front();
+		queued_messages.pop();
+
+		send_all(fd, &message[0], message.size());
 	}
 }
