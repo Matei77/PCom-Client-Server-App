@@ -256,6 +256,7 @@ bool Server::ProcessStdinCommand() {
 	return 0;
 }
 
+// TODO: give &poll_fd as argument
 void Server::ProcessClientRequest(pollfd poll_fd) {
 	int rc;
 	string buffer(MAX_USER_COMMAND_SIZE, '\0');
