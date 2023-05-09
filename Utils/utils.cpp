@@ -4,14 +4,16 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <arpa/inet.h>
+#include <algorithm>
 
+using namespace std;
 
 // receive size then content
-int recv_all(int sockfd, void *buffer) {
+int recv_all(int sockfd, void *buffer, uint32_t max_len) {
 	// receive data length
 	uint32_t len;
-	size_t bytes_received = 0;
-	size_t bytes_remaining = sizeof(uint32_t);
+	ssize_t bytes_received = 0;
+	ssize_t bytes_remaining = sizeof(uint32_t);
 	char *buff = (char *)&len;
 
 	while(bytes_remaining) {
@@ -26,7 +28,7 @@ int recv_all(int sockfd, void *buffer) {
 
 	// receive content
 	bytes_received = 0;
-	bytes_remaining = len;
+	bytes_remaining = min(len, max_len);
 	buff = (char *)buffer;
 
 	while(bytes_remaining) {
@@ -37,7 +39,7 @@ int recv_all(int sockfd, void *buffer) {
 		bytes_remaining -= bytes_received;
 	}
 
-   return len;
+   return min(len, max_len);
 }
 
 // send size then content
@@ -45,8 +47,8 @@ int send_all(int sockfd, void *buffer, uint32_t len) {
 	// send the size of the data
 	uint32_t conv = htonl(len);
 
-	size_t bytes_sent = 0;
-	size_t bytes_remaining = sizeof(conv);
+	ssize_t bytes_sent = 0;
+	ssize_t bytes_remaining = sizeof(conv);
 	char *buff = (char *)&conv;
 
 	while (bytes_remaining) {

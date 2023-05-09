@@ -1,10 +1,12 @@
 // Copyright Ionescu Matei-Stefan - 323CAb - 2022-2023
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <string>
 #include <cstring>
 #include <unistd.h>
 #include <sys/poll.h>
 #include <iostream>
+#include <sstream>
 
 #include "subscriber.hpp"
 #include "../Utils/utils.hpp"
@@ -27,16 +29,19 @@ void Subscriber::ConnectToServer() {
 	rc = connect(socket_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
   	DIE(rc < 0, "connect");
 
-	printf("[DEBUG] client id = %s\n", id);
-	
 	// send client id to server
-	send_all(socket_fd, &id[0], id.size());
+	send_all(socket_fd, &id[0], id.size() + 1);
+
+	bool server_answer;
+	rc = recv_all(socket_fd, &server_answer, sizeof(bool));
+	if (server_answer == 0) {
+		exit(0);
+	}
 }
 
 void Subscriber::RunClient() {
 	int rc;
 	bool stop_client = false;
-
 
 	ConnectToServer();
 
@@ -44,7 +49,7 @@ void Subscriber::RunClient() {
 	poll_fds.push_back({STDIN_FILENO, POLLIN, 0});
 
 	do {
-		rc = poll(poll_fds.data(), poll_fds.size(), -1);
+		rc = poll(&poll_fds[0], poll_fds.size(), -1);
 		DIE(rc < 0, "poll");
 
 		for (auto poll_fd : poll_fds) {
@@ -67,26 +72,32 @@ void Subscriber::RunClient() {
 }
 
 void Subscriber::ProcessServerMessage() {
-	string message;
+	string message(MAX_MESSAGE_SIZE, '\0');
 
 	// receive message from server
-	int rc = recv_all(socket_fd, &message[0]);
+	int rc = recv_all(socket_fd, &message[0], MAX_MESSAGE_SIZE);
+	message.resize(rc);
 
 	// print message
-	printf("%s\n", message);
+	printf("%s\n", message.c_str());
 }
 
 bool Subscriber::ProcessStdinCommand() {
+	string command;
 	string token;
-	int rc;
-	getline(cin, token, ' ');
+	
+	getline(cin, command);
+	istringstream iss(command);
+
+	getline(iss, token, ' ');
 
 	if (token == SUBSCRIBE_COMMAND) {
 		string server_command;
 
 		server_command = "s";
 
-		(cin, token, ' ');
+		token.clear();
+		getline(iss, token, ' ');
 		if (token.size() == 0) {
 			printf("Unrecognized command.\n");
 			return false;
@@ -94,7 +105,8 @@ bool Subscriber::ProcessStdinCommand() {
 
 		server_command = server_command + token;
 
-		getline(cin, token);
+		token.clear();
+		getline(iss, token);
 		if (token.size() == 0) {
 			printf("Unrecognized command.\n");
 			return false;
@@ -102,7 +114,7 @@ bool Subscriber::ProcessStdinCommand() {
 
 		server_command = server_command + token;
 
-		send_all(socket_fd, &server_command, server_command.size());
+		send_all(socket_fd, &server_command[0], server_command.size() + 1);
 
 		printf("Subscribed to topic.\n");
 
@@ -111,7 +123,8 @@ bool Subscriber::ProcessStdinCommand() {
 
 		server_command = "u";
 
-		getline(cin, token);
+		token.clear();
+		getline(iss, token);
 		if (token.size() == 0) {
 			printf("Unrecognized command.\n");
 			return false;
@@ -119,11 +132,13 @@ bool Subscriber::ProcessStdinCommand() {
 
 		server_command = server_command + token;
 
-		send_all(socket_fd, &server_command, server_command.size());
+		send_all(socket_fd, &server_command[0], server_command.size() + 1);
 
 		printf("Unsubscribed from topic.\n");
 
 	} else if (token == EXIT_COMMAND) {
+		send_all(socket_fd, NULL, 0);
+
 		return true;
 
 	} else {

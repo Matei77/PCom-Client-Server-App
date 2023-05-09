@@ -3,7 +3,8 @@ CFLAGS = -g -Wall -Wextra -std=c++17
 
 .PHONY: build clean
 
-build: server subscriber
+build: server subscriber server_main.o server.o user.o subscriber_main.o \
+	   subscriber.o utils.o
 
 
 server_main.o: Server/main.cpp

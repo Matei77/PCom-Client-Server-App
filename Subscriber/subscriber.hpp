@@ -5,6 +5,8 @@
 
 using namespace std;
 
+#define MAX_MESSAGE_SIZE 1600
+
 #define SUBSCRIBE_COMMAND "subscribe"
 #define UNSUBSCRIBE_COMMAND "unsubscribe"
 #define EXIT_COMMAND "exit"

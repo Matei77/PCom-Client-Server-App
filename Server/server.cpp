@@ -127,8 +127,12 @@ void Server::ProcessNewTcpConnection() {
 	poll_fds.push_back({client_fd, POLLIN, 0});
 
 	// receive client id
-	string client_id;
-	rc = recv_all(client_fd, &client_id[0]);
+	string client_id(MAX_CLIENT_ID_LEN, '\0');
+	rc = recv_all(client_fd, &client_id[0], MAX_CLIENT_ID_LEN);
+
+	client_id.reserve(rc);
+
+	// cout << "[DEBUG] client id = " << client_id << endl;
 
 	// check if client_id already exists
 	if (users_database.count(client_id)) {
@@ -138,7 +142,12 @@ void Server::ProcessNewTcpConnection() {
 
 		if (user.IsOnline()) {
 			// client exists and is online
-			printf("Client %s already connected.\n", client_id);
+			bool ans = 0;
+			send_all(client_fd, &ans, sizeof(bool));
+			
+			close(client_fd);
+
+			printf("Client %s already connected.\n", client_id.c_str());
 			
 			return;
 
@@ -157,11 +166,15 @@ void Server::ProcessNewTcpConnection() {
 		// is a new user
 		User user(client_fd, true);
 		users_database.insert({client_id, user});
+		// cout << "[DEBUG] inserted user to database: " << client_id << " - " << user.GetFd() << endl;
 	}
 
 	// show message for new and reconnected users
-	printf("New client %s connected from %s:%d.\n", client_id,
+	printf("New client %s connected from %s:%d.\n", client_id.c_str(),
 			inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+	
+	bool ans = 1;
+	send_all(client_fd, &ans, sizeof(bool));
 }
 
 void Server::ProcessUdpData() {
@@ -179,7 +192,7 @@ void Server::ProcessUdpData() {
 
 	buffer.resize(rc);
 
-	printf("[DEBUG] packet received from udp: %s", buffer);
+	printf("[DEBUG] packet received from udp: %s", buffer.c_str());
 
 	// parse content received
 	string topic;
@@ -220,7 +233,7 @@ void Server::ProcessUdpData() {
 	}
 	message += content;
 
-	printf("[DEBUG] message sent from udp: %s\n", message);
+	printf("[DEBUG] message sent from udp: %s\n", message.c_str());
 
 
 	// notify users
@@ -249,12 +262,15 @@ void Server::ProcessClientRequest(pollfd poll_fd) {
 
 	pair<string, User> user = FindUserByFd(poll_fd.fd);
 
-	rc = recv_all(poll_fd.fd, &buffer[0]);
-	DIE (rc < 0, "recv tcp client");
+	rc = recv_all(poll_fd.fd, &buffer[0], MAX_USER_COMMAND_SIZE);
+	buffer.reserve(rc);
 
-	buffer.resize(rc);
+	cout << "[DEBUG] received data of size - " << rc << " - from tcp: " << buffer << endl;
+
 
 	if (rc == 0) {
+		printf("Client %s disconnected.\n", user.first.c_str());
+		
 		// user has disconnected
 		user.second.SetOnline(false);
 		user.second.SetFd(-1);
@@ -262,27 +278,27 @@ void Server::ProcessClientRequest(pollfd poll_fd) {
 		// close the connection fd
 		close(poll_fd.fd);
 		poll_fd.fd = -1;
-
-		printf("Client %s disconnected.\n", user.first);
 		
 		return;
 	}
 
 	if (buffer[0] == 's') {
 		// subscribe user to topic
-		string topic = buffer.substr(1, rc - 2);
-		bool sf = atoi(&buffer[rc - 1]);
+		string topic = buffer.substr(1, rc - 3);
+		bool sf = atoi(&buffer[rc - 2]);
 
 		// ? --------->>>>> needs Setter?
 		user.second.GetSubbedTopic().insert({topic, sf});
+		cout << "[DEBUG] user has subscribed to topic: " << topic << " - sf: " << sf << endl;
 
 
 
 	} else if (buffer[0] == 'u') {
 		// unsubscribe user from topic
-		string topic = buffer.substr(1, rc - 1);
+		string topic = buffer.substr(1, rc - 2);
 
 		user.second.GetSubbedTopic().erase(topic);
+		cout << "[DEBUG] user has unsubscribed from topic: " << topic << endl;
 	}
 }
 
