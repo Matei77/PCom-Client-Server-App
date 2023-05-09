@@ -2,7 +2,7 @@
 #include <string>
 #include <sys/socket.h>
 
-#include "../utils/utils.hpp"
+#include "../Utils/utils.hpp"
 #include "user.hpp"
 
 using namespace std;

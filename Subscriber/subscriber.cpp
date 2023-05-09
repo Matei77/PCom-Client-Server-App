@@ -7,8 +7,7 @@
 #include <iostream>
 
 #include "subscriber.hpp"
-#include "../utils/utils.hpp"
-#include "../utils/types.hpp"
+#include "../Utils/utils.hpp"
 
 void Subscriber::ConnectToServer() {
 	int rc;
@@ -28,13 +27,16 @@ void Subscriber::ConnectToServer() {
 	rc = connect(socket_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
   	DIE(rc < 0, "connect");
 
+	printf("[DEBUG] client id = %s\n", id);
+	
 	// send client id to server
-	send_all(socket_fd, &id, id.size());
+	send_all(socket_fd, &id[0], id.size());
 }
 
 void Subscriber::RunClient() {
 	int rc;
 	bool stop_client = false;
+
 
 	ConnectToServer();
 
@@ -87,7 +89,7 @@ bool Subscriber::ProcessStdinCommand() {
 		(cin, token, ' ');
 		if (token.size() == 0) {
 			printf("Unrecognized command.\n");
-			return;
+			return false;
 		}
 
 		server_command = server_command + token;
@@ -95,7 +97,7 @@ bool Subscriber::ProcessStdinCommand() {
 		getline(cin, token);
 		if (token.size() == 0) {
 			printf("Unrecognized command.\n");
-			return;
+			return false;
 		}
 
 		server_command = server_command + token;
@@ -112,7 +114,7 @@ bool Subscriber::ProcessStdinCommand() {
 		getline(cin, token);
 		if (token.size() == 0) {
 			printf("Unrecognized command.\n");
-			return;
+			return false;
 		}
 
 		server_command = server_command + token;

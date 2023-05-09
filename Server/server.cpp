@@ -1,7 +1,7 @@
 // Copyright Ionescu Matei-Stefan - 323CAb - 2022-2023
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
-#include <poll.h>
+#include <sys/poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cstring>
@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <vector>
 
-#include "../utils/utils.hpp"
+#include "../Utils/utils.hpp"
 #include "server.hpp"
 #include "user.hpp"
 
@@ -28,7 +28,8 @@ void Server::RunServer() {
 	poll_fds.push_back({STDIN_FILENO, POLLIN, 0});
 
 	do {
-		rc = poll(poll_fds.data(), poll_fds.size(), -1);
+
+		rc = poll(&poll_fds[0], poll_fds.size(), -1);
 		DIE(rc < 0, "poll");
 
 		for (auto poll_fd : poll_fds) {

@@ -45,8 +45,8 @@ int send_all(int sockfd, void *buffer, uint32_t len) {
 	// send the size of the data
 	uint32_t conv = htonl(len);
 
-	uint32_t bytes_sent = 0;
-	uint32_t bytes_remaining = sizeof(conv);
+	size_t bytes_sent = 0;
+	size_t bytes_remaining = sizeof(conv);
 	char *buff = (char *)&conv;
 
 	while (bytes_remaining) {

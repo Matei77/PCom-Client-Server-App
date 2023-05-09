@@ -4,7 +4,7 @@
 
 #include <unordered_map>
 #include <vector>
-#include <poll.h>
+#include <sys/poll.h>
 #include <string>
 #include <arpa/inet.h>
 
@@ -22,7 +22,7 @@ using namespace std;
 class Server {
 	private:
 		// map id to the user
-		static unordered_map<string, User> users_database;
+		unordered_map<string, User> users_database;
 
 		// server sockets fd
 		int tcp_socket_fd, udp_socket_fd;
@@ -38,7 +38,7 @@ class Server {
 
    public:
 		// constructor
-		Server::Server(uint16_t port);
+		Server(uint16_t port);
 
 		// start and run the server
 		void RunServer();

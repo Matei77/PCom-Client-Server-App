@@ -1,27 +1,29 @@
 // Copyright Ionescu Matei-Stefan - 323CAb - 2022-2023
 #include <iostream>
 
-#include "subscriber.hpp"
-#include "../utils/utils.hpp"
+#include "../Utils/utils.hpp"
+#include "server.hpp"
 
 int main(int argc, char *argv[]) {
 	// disable buffering
 	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 
 	// check the number of arguments received
-	if (argc != 4) {
-		printf("\n Usage: %s <CLIENT_ID> <SERVER_IP> <SERVER_PORT>\n", argv[0]);
+	if (argc != 2) {
+		printf("\n Usage: %s <DESIRED_PORT>\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
 	// get the port
 	uint16_t port;
-	int rc = sscanf(argv[3], "%hu", &port);
+	int rc = sscanf(argv[1], "%hu", &port);
 	DIE(rc != 1, "Given port is invalid");
 
-	Subscriber subscriber(argv[1], argv[2], port);
+	// create server
+	Server server(port);
 
-	subscriber.RunClient();
+	// run the server
+	server.RunServer();
 
 	return 0;
 }
