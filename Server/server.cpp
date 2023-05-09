@@ -130,7 +130,7 @@ void Server::ProcessNewTcpConnection() {
 	string client_id(MAX_CLIENT_ID_LEN, '\0');
 	rc = recv_all(client_fd, &client_id[0], MAX_CLIENT_ID_LEN);
 
-	client_id.reserve(rc);
+	client_id.resize(rc);
 
 	// cout << "[DEBUG] client id = " << client_id << endl;
 
