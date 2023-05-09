@@ -7,6 +7,7 @@
 #include <sys/poll.h>
 #include <iostream>
 #include <sstream>
+#include <netinet/tcp.h>
 
 #include "subscriber.hpp"
 #include "../Utils/utils.hpp"
@@ -16,6 +17,10 @@ void Subscriber::ConnectToServer() {
 
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 	DIE(socket_fd < 0, "socket");
+
+	int enable = 1;
+	rc = setsockopt(socket_fd, SOL_TCP, TCP_NODELAY, &enable, sizeof(int));
+	DIE(rc < 0, "setsockopt(TCP_NODELAY) tcp");
 
 	struct sockaddr_in serv_addr;
   	socklen_t socket_len = sizeof(struct sockaddr_in);
