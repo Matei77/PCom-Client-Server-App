@@ -311,6 +311,7 @@ void Server::ExitServer() {
 	}
 }
 
+// TODO: return by address
 pair<string, User> Server::FindUserByFd(int fd) {
 	// ? ----->>>> User* ?
 	for (auto user : users_database) {
