@@ -112,7 +112,7 @@ bool Subscriber::ProcessStdinCommand() {
 
 		token.clear();
 		getline(iss, token);
-		if (token.size() == 0) {
+		if (token.size() == 0 || (token != "0" && token != "1")) {
 			printf("Unrecognized command.\n");
 			return false;
 		}

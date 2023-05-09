@@ -57,9 +57,9 @@ class Server {
 		// returns 1 if the server should stop
 		bool ProcessStdinCommand();
 
-		void ProcessClientRequest(pollfd poll_fd);
+		void ProcessClientRequest(pollfd &poll_fd);
 
-		pair<string, User> FindUserByFd(int fd);
+		pair<string, User&> FindUserByFd(int fd);
 
 		// close the server
 		void ExitServer();

@@ -9,7 +9,7 @@
 using namespace std;
 
 // receive size then content
-int recv_all(int sockfd, void *buffer, uint32_t max_len) {
+uint32_t recv_all(int sockfd, void *buffer, uint32_t max_len) {
 	// receive data length
 	uint32_t len;
 	ssize_t bytes_received = 0;
@@ -43,7 +43,7 @@ int recv_all(int sockfd, void *buffer, uint32_t max_len) {
 }
 
 // send size then content
-int send_all(int sockfd, void *buffer, uint32_t len) {
+uint32_t send_all(int sockfd, void *buffer, uint32_t len) {
 	// send the size of the data
 	uint32_t conv = htonl(len);
 
@@ -73,4 +73,23 @@ int send_all(int sockfd, void *buffer, uint32_t len) {
 		}
 
 	return len;
+}
+
+uint32_t recv_udp(int sockfd, void *buffer, uint32_t len, sockaddr_in& udp_client_addr, socklen_t& udp_client_len) {
+	int rc;
+	ssize_t bytes_received = 0;
+	char *buff = (char *)buffer;
+	ssize_t bytes_remaining = len;
+
+	while (bytes_remaining) {
+		rc = recvfrom(sockfd, buff, bytes_remaining, 0,
+			(struct sockaddr *)&udp_client_addr, &udp_client_len);
+		DIE(rc < 0, "recvfrom udp");
+
+		buff += rc;
+		bytes_received += rc;
+		bytes_remaining -= rc;
+	}
+
+	return bytes_received;
 }

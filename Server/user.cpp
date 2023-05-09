@@ -1,6 +1,7 @@
 // Copyright Ionescu Matei-Stefan - 323CAb - 2022-2023
 #include <string>
 #include <sys/socket.h>
+#include <iostream>
 
 #include "../Utils/utils.hpp"
 #include "user.hpp"
@@ -27,6 +28,8 @@ void User::ReconnectUser() {
 		string message = queued_messages.front();
 		queued_messages.pop();
 
-		send_all(fd, &message[0], message.size());
+		send_all(fd, &message[0], message.size() + 1);
 	}
+
+	cout << "[DEBUG] reconnected user" << endl;
 }

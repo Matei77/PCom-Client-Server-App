@@ -10,6 +10,11 @@
 #include <unordered_map>
 #include <algorithm>
 #include <vector>
+#include <cmath>
+#include <sstream>
+
+
+#include <iomanip>
 
 #include "../Utils/utils.hpp"
 #include "server.hpp"
@@ -28,28 +33,32 @@ void Server::RunServer() {
 	poll_fds.push_back({STDIN_FILENO, POLLIN, 0});
 
 	do {
-
 		rc = poll(&poll_fds[0], poll_fds.size(), -1);
 		DIE(rc < 0, "poll");
 
-		for (auto poll_fd : poll_fds) {
+		for (auto & poll_fd : poll_fds) {
+			//cout << "---------> checking poll_fd: " << poll_fd.fd << endl;
 			if (poll_fd.revents & POLLIN) {
 				if (poll_fd.fd == tcp_socket_fd) {
 					// process the new tcp connection
 					ProcessNewTcpConnection();
+					//cout << "processed new tcp connection()\n";
 
 				} else if (poll_fd.fd == udp_socket_fd) {
 					// receive data from udp socket
 					ProcessUdpData();
+					//cout << "processed new udp connection()\n";
 
 				} else if (poll_fd.fd == STDIN_FILENO) {
 					// process the command given to the server by stdin
 					stop_server = ProcessStdinCommand();
 					if (stop_server) break;
+					//cout << "processed new stdin command\n";
 				
 				} else {
 					// receive data from client
 					ProcessClientRequest(poll_fd);
+					//cout << "processed new client request\n";
 				}
 			}
 		}
@@ -87,7 +96,7 @@ void Server::InitServer() {
 	// disable Nagle algorithm for the tcp socket
 	enable = 1;
 	rc = setsockopt(tcp_socket_fd, SOL_TCP, TCP_NODELAY, &enable, sizeof(int));
-	DIE(rc < 0, "setsockopt(SO_REUSEADDR) tcp");
+	DIE(rc < 0, "setsockopt(TCP_NODELAY) tcp");
 
 	// TODO: ioctl() -> make sockets nonblocking?
 
@@ -123,9 +132,6 @@ void Server::ProcessNewTcpConnection() {
 		accept(tcp_socket_fd, (struct sockaddr *)&client_addr, &client_len);
 	DIE(client_fd < 0, "accept");
 
-	// add the new client to the poll
-	poll_fds.push_back({client_fd, POLLIN, 0});
-
 	// receive client id
 	string client_id(MAX_CLIENT_ID_LEN, '\0');
 	rc = recv_all(client_fd, &client_id[0], MAX_CLIENT_ID_LEN);
@@ -138,7 +144,7 @@ void Server::ProcessNewTcpConnection() {
 	if (users_database.count(client_id)) {
 
 		// ? ---->>>> might be copy not the actual element in map
-		User user = users_database.find(client_id)->second;
+		User& user = users_database.find(client_id)->second;
 
 		if (user.IsOnline()) {
 			// client exists and is online
@@ -175,6 +181,9 @@ void Server::ProcessNewTcpConnection() {
 	
 	bool ans = 1;
 	send_all(client_fd, &ans, sizeof(bool));
+
+	// add the new client to the poll
+	poll_fds.push_back({client_fd, POLLIN, 0});
 }
 
 void Server::ProcessUdpData() {
@@ -185,55 +194,88 @@ void Server::ProcessUdpData() {
 	string buffer(MAX_BUFF_SIZE, '\0');
 
 	// receive data
-	// ? ----->>>> might not receive data well
-	rc = recvfrom(udp_socket_fd, &buffer, MAX_BUFF_SIZE, 0,
+	rc = recvfrom(udp_socket_fd, &buffer[0], MAX_BUFF_SIZE, 0,
 		(struct sockaddr *)&udp_client_addr, &udp_client_len);
 	DIE(rc < 0, "recvfrom udp");
 
 	buffer.resize(rc);
 
-	printf("[DEBUG] packet received from udp: %s", buffer.c_str());
-
 	// parse content received
 	string topic;
-	char data_type;
+	uint8_t data_type;
 	string content;
 
 	auto pos = buffer.substr(0, MAX_TOPIC_SIZE).find('\0');
+
 	if (pos != string::npos) {
 		topic = buffer.substr(0, pos);
-		data_type = buffer.at(pos);
-		content = buffer.substr(pos + 1, rc - pos - 1);
 	} else {
 		topic = buffer.substr(0, MAX_TOPIC_SIZE);
-		data_type = buffer.at(MAX_TOPIC_SIZE);
-		content = buffer.substr(MAX_TOPIC_SIZE + 1, rc - pos - 1);
 	}
+
+	data_type = buffer.at(MAX_TOPIC_SIZE);
+	content = buffer.substr(MAX_TOPIC_SIZE + 1, rc - (MAX_TOPIC_SIZE + 1));
+
+	// cout << "[DEBUG] topic: " << topic << endl;
+	// cout << "[DEBUG] data_type: " << (char)(data_type + '0') << endl;
 
 	// set the message sent to the users
 	string message;
-	message = *inet_ntoa(udp_client_addr.sin_addr) + ":"
-			  + to_string(udp_client_addr.sin_port) + " - " + topic + " - ";
+	message = inet_ntoa(udp_client_addr.sin_addr);
+	message = message + ":" + to_string(udp_client_addr.sin_port) + " - " + topic + " - ";
 	
 	if (data_type == 0) {
 		message = message + "INT" + " - ";
 		if (content[0] == 1) {
 			message += "-";
 		}
+		uint32_t num = ntohl(*((uint32_t *)(&content[1])));
+		message += to_string(num);
+		//cout << "[DEBUG] content: " << num << endl;
 
 	} else if (data_type == 1) {
 		message = message + "SHORT_REAL" + " - ";
+		uint16_t num = ntohs(*((uint16_t *)(&content[0])));
+
+		ostringstream out;
+		out.precision(2);
+		out << fixed << num / 100.0;
+		message += move(out).str();
 
 	} else if (data_type == 2) {
 		message = message + "FLOAT" + " - ";
+		if (content[0] == 1) {
+			message += "-";
+		}
+		uint32_t num = ntohl(*((uint32_t *)(&content[1])));
+		//cout << "number: " << num << endl;
+
+		uint8_t power =  *((uint8_t *)(&content[5]));
+		//cout << "power: " << power + 0 << endl;
+
+		float power_val = pow(10, power);
+
+		ostringstream out;
+		out.precision(power);
+		out << fixed << num / power_val;
+		message += move(out).str();
+
 		
 	}else if (data_type == 3) {
 		message = message + "STRING" + " - ";
+
+		auto pos = content.find('\0');
+
+		if (pos != string::npos) {
+			message += content.substr(0, pos);
+		} else {
+			message += content;
+			message += '\0';
+		}
 		
 	}
-	message += content;
 
-	printf("[DEBUG] message sent from udp: %s\n", message.c_str());
+	//printf("[DEBUG] message sent from udp: %s\n", message.c_str());
 
 
 	// notify users
@@ -257,16 +299,17 @@ bool Server::ProcessStdinCommand() {
 }
 
 // TODO: give &poll_fd as argument
-void Server::ProcessClientRequest(pollfd poll_fd) {
+void Server::ProcessClientRequest(pollfd &poll_fd) {
 	int rc;
 	string buffer(MAX_USER_COMMAND_SIZE, '\0');
 
-	pair<string, User> user = FindUserByFd(poll_fd.fd);
+	pair<string, User&> user = FindUserByFd(poll_fd.fd);
+	// cout << "[DEBUG] << FindById: user is online - " << user.second.IsOnline() << endl;
 
 	rc = recv_all(poll_fd.fd, &buffer[0], MAX_USER_COMMAND_SIZE);
 	buffer.reserve(rc);
 
-	cout << "[DEBUG] received data of size - " << rc << " - from tcp: " << buffer << endl;
+	//cout << "[DEBUG] received data of size - " << rc << " - from tcp: " << buffer << endl;
 
 
 	if (rc == 0) {
@@ -290,7 +333,7 @@ void Server::ProcessClientRequest(pollfd poll_fd) {
 
 		// ? --------->>>>> needs Setter?
 		user.second.GetSubbedTopic().insert({topic, sf});
-		cout << "[DEBUG] user has subscribed to topic: " << topic << " - sf: " << sf << endl;
+		//cout << "[DEBUG] user has subscribed to topic: " << topic << " - sf: " << sf << endl;
 
 
 
@@ -299,7 +342,7 @@ void Server::ProcessClientRequest(pollfd poll_fd) {
 		string topic = buffer.substr(1, rc - 2);
 
 		user.second.GetSubbedTopic().erase(topic);
-		cout << "[DEBUG] user has unsubscribed from topic: " << topic << endl;
+		//cout << "[DEBUG] user has unsubscribed from topic: " << topic << endl;
 	}
 }
 
@@ -312,12 +355,12 @@ void Server::ExitServer() {
 }
 
 // TODO: return by address
-pair<string, User> Server::FindUserByFd(int fd) {
+pair<string, User&> Server::FindUserByFd(int fd) {
 	// ? ----->>>> User* ?
 	for (auto user : users_database) {
 		if (user.second.GetFd() == fd) {
-			return user;
+			return {user.first, users_database.at(user.first)};
 		}
 	}
-	return {"NO_USER", User{-1, 0}};
+	return {"NO_USER", users_database.at(0)};
 }
