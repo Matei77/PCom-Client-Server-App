@@ -12,6 +12,7 @@
 #include <vector>
 #include <cmath>
 #include <sstream>
+#include <sys/ioctl.h>
 
 
 #include <iomanip>
@@ -95,10 +96,11 @@ void Server::InitServer() {
 
 	// disable Nagle algorithm for the tcp socket
 	enable = 1;
-	rc = setsockopt(tcp_socket_fd, SOL_TCP, TCP_NODELAY, &enable, sizeof(int));
+	rc = setsockopt(tcp_socket_fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(int));
 	DIE(rc < 0, "setsockopt(TCP_NODELAY) tcp");
 
 	// TODO: ioctl() -> make sockets nonblocking?
+	//rc = ioctl(tcp_socket_fd, FIONBIO, (char *)&enable);
 
 	// fill server_addr data
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -135,6 +137,7 @@ void Server::ProcessNewTcpConnection() {
 	// receive client id
 	string client_id(MAX_CLIENT_ID_LEN, '\0');
 	rc = recv_all(client_fd, &client_id[0], MAX_CLIENT_ID_LEN);
+	// cout << "received client id" << endl;
 
 	client_id.resize(rc);
 
@@ -144,7 +147,7 @@ void Server::ProcessNewTcpConnection() {
 	if (users_database.count(client_id)) {
 
 		// ? ---->>>> might be copy not the actual element in map
-		User& user = users_database.find(client_id)->second;
+		User& user = users_database.at(client_id);
 
 		if (user.IsOnline()) {
 			// client exists and is online
@@ -199,6 +202,8 @@ void Server::ProcessUdpData() {
 	DIE(rc < 0, "recvfrom udp");
 
 	buffer.resize(rc);
+
+	// cout << "[DEBUG] received udp packet:" << endl;
 
 	// parse content received
 	string topic;
@@ -282,6 +287,8 @@ void Server::ProcessUdpData() {
 	for (auto user : users_database) {
 		user.second.NotifyUser(topic, message);
 	}
+
+	// cout << "[DEBUG] sent udp packet:" << endl;
 }
 
 bool Server::ProcessStdinCommand() {
@@ -309,7 +316,7 @@ void Server::ProcessClientRequest(pollfd &poll_fd) {
 	rc = recv_all(poll_fd.fd, &buffer[0], MAX_USER_COMMAND_SIZE);
 	buffer.reserve(rc);
 
-	//cout << "[DEBUG] received data of size - " << rc << " - from tcp: " << buffer << endl;
+	// cout << "[DEBUG] received data of size - " << rc << " - from tcp: " << buffer << endl;
 
 
 	if (rc == 0) {
@@ -330,6 +337,7 @@ void Server::ProcessClientRequest(pollfd &poll_fd) {
 		// subscribe user to topic
 		string topic = buffer.substr(1, rc - 3);
 		bool sf = atoi(&buffer[rc - 2]);
+		cout << "sf:" << sf;
 
 		// ? --------->>>>> needs Setter?
 		user.second.GetSubbedTopic().insert({topic, sf});
@@ -348,6 +356,10 @@ void Server::ProcessClientRequest(pollfd &poll_fd) {
 
 void Server::ExitServer() {
 	// close connections
+	for (auto user : users_database) {
+		send_all(user.second.GetFd(), NULL, 0);
+	}
+
 	for (auto poll_fd : poll_fds) {
 		if (poll_fd.fd >= 0)
 			close(poll_fd.fd);

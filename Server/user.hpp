@@ -37,7 +37,7 @@ class User {
 	
 		void SetFd(int fd);
 
-		unordered_map<string, bool> GetSubbedTopic();
+		unordered_map<string, bool>& GetSubbedTopic();
 };
 
 // constructor for User class
@@ -63,7 +63,7 @@ inline int User::GetFd() {
 	return this->fd;
 }
 
-inline unordered_map<string, bool> User::GetSubbedTopic() {
+inline unordered_map<string, bool>& User::GetSubbedTopic() {
 	return this->subbed_topics;
 }
 

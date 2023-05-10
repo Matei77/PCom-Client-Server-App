@@ -19,8 +19,12 @@ void Subscriber::ConnectToServer() {
 	DIE(socket_fd < 0, "socket");
 
 	int enable = 1;
-	rc = setsockopt(socket_fd, SOL_TCP, TCP_NODELAY, &enable, sizeof(int));
+	rc = setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(int));
 	DIE(rc < 0, "setsockopt(TCP_NODELAY) tcp");
+
+	// enable = 1;
+	// rc = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
+	// DIE(rc < 0, "setsockopt(SO_REUSEADDR) udp");
 
 	struct sockaddr_in serv_addr;
   	socklen_t socket_len = sizeof(struct sockaddr_in);
@@ -61,6 +65,7 @@ void Subscriber::RunClient() {
 			if (poll_fd.revents & POLLIN) {
 				if (poll_fd.fd == socket_fd) {
 					// the client received a message from the server
+					// cout << "[DEBUG] received message" << endl;
 					ProcessServerMessage();
 
 				} else {
@@ -81,7 +86,12 @@ void Subscriber::ProcessServerMessage() {
 
 	// receive message from server
 	int rc = recv_all(socket_fd, &message[0], MAX_MESSAGE_SIZE);
+	if (rc == 0) {
+		exit(0);
+	}
+	
 	message.resize(rc);
+	//cout << "received message of size: " << rc << endl;
 
 	// print message
 	printf("%s\n", message.c_str());
