@@ -234,7 +234,7 @@ bool Server::ProcessStdinCommand() {
 		return 1;
 
 	} else {
-		printf("Unrecognized command\n");
+		printf("Unrecognized command.\n");
 	}
 
 	return 0;
@@ -268,14 +268,24 @@ void Server::ProcessTcpClientRequest(pollfd &poll_fd) {
 		// subscribe user to topic
 		string topic = buffer.substr(1, rc - 3);
 		bool sf = atoi(&buffer[rc - 2]);
-
-		user.second.GetSubbedTopic().insert({topic, sf});
+		
+		if (user.second.GetSubbedTopics().count(topic) == 0) {
+			// the user was not previously subbed to the topic
+			
+			// insert topic
+			user.second.GetSubbedTopics().insert({topic, sf});
+		} else {
+			// the user is already subbed to the topic
+			
+			// update sf value
+			user.second.GetSubbedTopics().at(topic) = sf;
+		}
 
 	} else if (buffer[0] == 'u') {
 		// unsubscribe user from topic
 		string topic = buffer.substr(1, rc - 2);
 
-		user.second.GetSubbedTopic().erase(topic);
+		user.second.GetSubbedTopics().erase(topic);
 	}
 }
 
