@@ -1,23 +1,27 @@
 // Copyright Ionescu Matei-Stefan - 323CAb - 2022-2023
-#include <sys/socket.h>
+#include "subscriber.hpp"
+
 #include <arpa/inet.h>
-#include <string>
-#include <cstring>
-#include <unistd.h>
+#include <netinet/tcp.h>
 #include <sys/poll.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#include <cstring>
 #include <iostream>
 #include <sstream>
-#include <netinet/tcp.h>
+#include <string>
 
-#include "subscriber.hpp"
 #include "../Utils/utils.hpp"
 
+// This method runs the client, monitoring the tcp connection socket and stdin fd using the poll
+// system call.
 void Subscriber::RunClient() {
 	int rc;
 	bool stop_client = false;
 
 	ConnectToServer();
-	
+
 	// add the connection socket and stdin fd to the poll
 	poll_fds.push_back({socket_fd, POLLIN, 0});
 	poll_fds.push_back({STDIN_FILENO, POLLIN, 0});
@@ -39,12 +43,12 @@ void Subscriber::RunClient() {
 				}
 			}
 		}
-
 	} while (!stop_client);
 
 	close(socket_fd);
 }
 
+// Create tcp socket, send the user's id to the server and get the response from the server.
 void Subscriber::ConnectToServer() {
 	int rc;
 
@@ -56,16 +60,16 @@ void Subscriber::ConnectToServer() {
 	DIE(rc < 0, "setsockopt(TCP_NODELAY) tcp");
 
 	struct sockaddr_in serv_addr;
-  	socklen_t socket_len = sizeof(struct sockaddr_in);
+	socklen_t socket_len = sizeof(struct sockaddr_in);
 
 	memset(&serv_addr, 0, socket_len);
-  	serv_addr.sin_family = AF_INET;
-  	serv_addr.sin_port = htons(server_port);
-  	rc = inet_pton(AF_INET, &server_ip[0], &serv_addr.sin_addr.s_addr);
-  	DIE(rc <= 0, "inet_pton");
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(server_port);
+	rc = inet_pton(AF_INET, &server_ip[0], &serv_addr.sin_addr.s_addr);
+	DIE(rc <= 0, "inet_pton");
 
 	rc = connect(socket_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-  	DIE(rc < 0, "connect");
+	DIE(rc < 0, "connect");
 
 	// send client id to server
 	send_all(socket_fd, &id[0], id.size() + 1);
@@ -78,6 +82,7 @@ void Subscriber::ConnectToServer() {
 	}
 }
 
+// Show the message received from the server.
 void Subscriber::ProcessServerMessage() {
 	string message(MAX_MESSAGE_SIZE, '\0');
 
@@ -88,17 +93,18 @@ void Subscriber::ProcessServerMessage() {
 	if (rc == 0) {
 		exit(0);
 	}
-	
+
 	message.resize(rc);
 
 	// print message
 	printf("%s\n", message.c_str());
 }
 
+// Process the commands given by the user via stdin.
 bool Subscriber::ProcessStdinCommand() {
 	string command;
 	string token;
-	
+
 	getline(cin, command);
 	istringstream iss(command);
 

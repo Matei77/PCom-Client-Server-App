@@ -1,25 +1,29 @@
 // Copyright Ionescu Matei-Stefan - 323CAb - 2022-2023
+#include "server.hpp"
+
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
+#include <sys/ioctl.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <iostream>
 #include <queue>
-#include <unordered_map>
-#include <algorithm>
-#include <vector>
-#include <cmath>
 #include <sstream>
-#include <sys/ioctl.h>
+#include <unordered_map>
+#include <vector>
 
 #include "../Utils/utils.hpp"
-#include "server.hpp"
 #include "user.hpp"
 
 using namespace std;
 
+// This method runs the server, monitoring the tcp connection socket, udp connection socket and
+// stdin fd using the poll system call.
 void Server::RunServer() {
 	int rc, stop_server = 0;
 
@@ -34,7 +38,7 @@ void Server::RunServer() {
 		rc = poll(&poll_fds[0], poll_fds.size(), -1);
 		DIE(rc < 0, "poll");
 
-		for (auto & poll_fd : poll_fds) {
+		for (auto &poll_fd : poll_fds) {
 			if (poll_fd.revents & POLLIN) {
 				if (poll_fd.fd == tcp_socket_fd) {
 					// process the new tcp connection
@@ -48,24 +52,25 @@ void Server::RunServer() {
 					// process the command given to the server by stdin
 					stop_server = ProcessStdinCommand();
 					if (stop_server) break;
-				
+
 				} else {
-					// receive data from client
-					ProcessClientRequest(poll_fd);
+					// receive data from tcp client
+					ProcessTcpClientRequest(poll_fd);
 				}
 			}
 		}
 
 		// erase closed file descriptors from the vector
-		poll_fds.erase(remove_if(poll_fds.begin(), poll_fds.end(),
-			[](pollfd p_fd) { return p_fd.fd == -1; }), poll_fds.end());
+		poll_fds.erase(
+			remove_if(poll_fds.begin(), poll_fds.end(), [](pollfd p_fd) { return p_fd.fd == -1; }),
+			poll_fds.end());
 
 	} while (!stop_server);
 
 	ExitServer();
 }
 
-
+// This method sets up a tcp socket and a udp socket.
 void Server::InitServer() {
 	int rc, enable;
 
@@ -110,6 +115,7 @@ void Server::InitServer() {
 	DIE(rc < 0, "listen");
 }
 
+// This method processes a new connection received on the server's tcp socket.
 void Server::ProcessNewTcpConnection() {
 	int rc;
 	sockaddr_in client_addr;
@@ -119,8 +125,7 @@ void Server::ProcessNewTcpConnection() {
 	memset(&client_addr, 0, sizeof(client_addr));
 
 	// accept new tcp connection
-	int client_fd =
-		accept(tcp_socket_fd, (struct sockaddr *)&client_addr, &client_len);
+	int client_fd = accept(tcp_socket_fd, (struct sockaddr *)&client_addr, &client_len);
 	DIE(client_fd < 0, "accept");
 
 	// receive client id
@@ -131,17 +136,17 @@ void Server::ProcessNewTcpConnection() {
 
 	// check if client_id already exists
 	if (users_database.count(client_id)) {
-		User& user = users_database.at(client_id);
+		User &user = users_database.at(client_id);
 
 		if (user.IsOnline()) {
 			// client exists and is online
 			bool ans = 0;
 			send_all(client_fd, &ans, sizeof(bool));
-			
+
 			close(client_fd);
 
 			printf("Client %s already connected.\n", client_id.c_str());
-			
+
 			return;
 
 		} else {
@@ -174,9 +179,10 @@ void Server::ProcessNewTcpConnection() {
 
 	// show message for new and reconnected users
 	printf("New client %s connected from %s:%d.\n", client_id.c_str(),
-			inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+		   inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
 }
 
+// This method Processes the data received from the udp socket.
 void Server::ProcessUdpData() {
 	int rc;
 	sockaddr_in udp_client_addr;
@@ -185,8 +191,8 @@ void Server::ProcessUdpData() {
 	string buffer(MAX_BUFF_SIZE, '\0');
 
 	// receive data
-	rc = recvfrom(udp_socket_fd, &buffer[0], MAX_BUFF_SIZE, 0,
-		(struct sockaddr *)&udp_client_addr, &udp_client_len);
+	rc = recvfrom(udp_socket_fd, &buffer[0], MAX_BUFF_SIZE, 0, (struct sockaddr *)&udp_client_addr,
+				  &udp_client_len);
 	DIE(rc < 0, "recvfrom udp");
 
 	buffer.resize(rc);
@@ -209,16 +215,17 @@ void Server::ProcessUdpData() {
 
 	// get content
 	content = buffer.substr(MAX_TOPIC_SIZE + 1, rc - (MAX_TOPIC_SIZE + 1));
-	
+
 	// generate the message sent to the client
 	string message = GenerateMessage(topic, data_type, content, udp_client_addr);
 
 	// notify users
-	for (auto & user : users_database) {
+	for (auto &user : users_database) {
 		user.second.NotifyUser(topic, message);
 	}
 }
 
+// This method processes the input from stdin. It return 1 if the exit command was given.
 bool Server::ProcessStdinCommand() {
 	string command;
 	getline(cin, command, '\n');
@@ -233,18 +240,19 @@ bool Server::ProcessStdinCommand() {
 	return 0;
 }
 
-void Server::ProcessClientRequest(pollfd &poll_fd) {
+// This method processes the data received from a tcp client
+void Server::ProcessTcpClientRequest(pollfd &poll_fd) {
 	int rc;
 	string buffer(MAX_USER_COMMAND_SIZE, '\0');
 
-	pair<string, User&> user = FindUserByFd(poll_fd.fd);
+	pair<string, User &> user = FindUserByFd(poll_fd.fd);
 
 	rc = recv_all(poll_fd.fd, &buffer[0], MAX_USER_COMMAND_SIZE);
 	buffer.reserve(rc);
 
 	if (rc == 0) {
 		printf("Client %s disconnected.\n", user.first.c_str());
-		
+
 		// user has disconnected
 		user.second.SetOnline(false);
 		user.second.SetFd(-1);
@@ -252,7 +260,7 @@ void Server::ProcessClientRequest(pollfd &poll_fd) {
 		// close the connection fd
 		close(poll_fd.fd);
 		poll_fd.fd = -1;
-		
+
 		return;
 	}
 
@@ -260,7 +268,7 @@ void Server::ProcessClientRequest(pollfd &poll_fd) {
 		// subscribe user to topic
 		string topic = buffer.substr(1, rc - 3);
 		bool sf = atoi(&buffer[rc - 2]);
-		
+
 		user.second.GetSubbedTopic().insert({topic, sf});
 
 	} else if (buffer[0] == 'u') {
@@ -271,8 +279,9 @@ void Server::ProcessClientRequest(pollfd &poll_fd) {
 	}
 }
 
+// This method closes the file descriptors and the connection to the online tcp clients.
 void Server::ExitServer() {
-	// send closed connection to all users
+	// send closed connection to all online users
 	for (auto user : users_database) {
 		if (user.second.GetFd() != -1) {
 			send_all(user.second.GetFd(), NULL, 0);
@@ -281,12 +290,15 @@ void Server::ExitServer() {
 
 	// close connections
 	for (auto poll_fd : poll_fds) {
-		if (poll_fd.fd >= 0)
+		if (poll_fd.fd >= 0) {
 			close(poll_fd.fd);
+		}
 	}
 }
 
-pair<string, User&> Server::FindUserByFd(int fd) {
+// Find the user with a certain fd. It return a pair of the user's id and a reference to the user
+// object.
+pair<string, User &> Server::FindUserByFd(int fd) {
 	for (auto user : users_database) {
 		if (user.second.GetFd() == fd) {
 			return {user.first, users_database.at(user.first)};
@@ -295,11 +307,13 @@ pair<string, User&> Server::FindUserByFd(int fd) {
 	return {"NO_USER", users_database.at(0)};
 }
 
-string Server::GenerateMessage(string topic, uint8_t data_type,	string content, sockaddr_in udp_client_addr) {
-	// set the message sent to the users
+// Generate the message that the tcp clients will receive if they are subscribed to the topic.
+string Server::GenerateMessage(string topic, uint8_t data_type, string content,
+							   sockaddr_in udp_client_addr) {
+	// construct message
 	string message = inet_ntoa(udp_client_addr.sin_addr);
 	message = message + ":" + to_string(udp_client_addr.sin_port) + " - " + topic + " - ";
-	
+
 	if (data_type == 0) {
 		message = message + "INT" + " - ";
 		if (content[0] == 1) {
@@ -324,7 +338,7 @@ string Server::GenerateMessage(string topic, uint8_t data_type,	string content, 
 		}
 		uint32_t num = ntohl(*((uint32_t *)(&content[1])));
 
-		uint8_t power =  *((uint8_t *)(&content[5]));
+		uint8_t power = *((uint8_t *)(&content[5]));
 
 		float power_val = pow(10, power);
 
@@ -333,8 +347,7 @@ string Server::GenerateMessage(string topic, uint8_t data_type,	string content, 
 		out << fixed << num / power_val;
 		message += move(out).str();
 
-		
-	}else if (data_type == 3) {
+	} else if (data_type == 3) {
 		message = message + "STRING" + " - ";
 
 		auto pos = content.find('\0');
@@ -344,7 +357,7 @@ string Server::GenerateMessage(string topic, uint8_t data_type,	string content, 
 		} else {
 			message += content;
 			message += '\0';
-		}	
+		}
 	}
 
 	return message;

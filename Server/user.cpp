@@ -8,6 +8,7 @@
 
 using namespace std;
 
+// Sends or stores the message if the user is subscribed to topic.
 void User::NotifyUser(string topic, string message) {
 	if (subbed_topics.count(topic)) {
 		if (online) {
@@ -23,6 +24,7 @@ void User::NotifyUser(string topic, string message) {
 	}
 }
 
+// Sends all the messages from the queue.
 void User::ReconnectUser() {
 	while (!queued_messages.empty()) {
 		// if user has queued messages send them

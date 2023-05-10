@@ -58,7 +58,7 @@ class Server {
 		bool ProcessStdinCommand();
 
 		// process the data sent by the tcp client
-		void ProcessClientRequest(pollfd &poll_fd);
+		void ProcessTcpClientRequest(pollfd &poll_fd);
 
 		// close the server
 		void ExitServer();

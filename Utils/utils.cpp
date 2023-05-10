@@ -1,16 +1,15 @@
-#include "utils.hpp"
-
+// Copyright Ionescu Matei-Stefan - 323CAb - 2022-2023
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <algorithm>
 
-#include <iostream>
+#include "utils.hpp"
 
 using namespace std;
 
-// receive size then content
+// Receive size then content.
 uint32_t recv_all(int sockfd, void *buffer, uint32_t max_len) {
 	// receive len
 	uint32_t len;
@@ -44,7 +43,7 @@ uint32_t recv_all(int sockfd, void *buffer, uint32_t max_len) {
    return min(len, max_len);
 }
 
-// send size then content
+// Send size then content.
 uint32_t send_all(int sockfd, void *buffer, uint32_t len) {
 	// send len
 	uint32_t conv = htonl(len);
