@@ -1,30 +1,29 @@
 CC = g++
-CFLAGS = -g -Wall -Wextra -std=c++17
+CFLAGS = -Wall -Wextra -std=c++17
 
 .PHONY: build clean
 
-build: server subscriber server_main.o server.o user.o subscriber_main.o \
-	   subscriber.o utils.o
+build: server subscriber
 
 
-server_main.o: Server/main.cpp
+server_main.o: src/server/main.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-server.o: Server/server.cpp Server/server.hpp
+server.o: src/server/server.cpp src/server/server.hpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-user.o: Server/user.cpp Server/user.hpp
-	$(CC) $(CFLAGS) -o $@ -c $<
-
-
-subscriber_main.o: Subscriber/main.cpp
-	$(CC) $(CFLAGS) -o $@ -c $<
-
-subscriber.o: Subscriber/subscriber.cpp Subscriber/subscriber.hpp
+user.o: src/server/user.cpp src/server/user.hpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 
-utils.o: Utils/utils.cpp Utils/utils.hpp
+subscriber_main.o: src/subscriber/main.cpp
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+subscriber.o: src/subscriber/subscriber.cpp src/subscriber/subscriber.hpp
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+
+utils.o: src/utils/utils.cpp src/utils/utils.hpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 

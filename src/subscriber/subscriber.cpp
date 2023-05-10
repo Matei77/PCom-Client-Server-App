@@ -12,7 +12,7 @@
 #include <sstream>
 #include <string>
 
-#include "../Utils/utils.hpp"
+#include "../utils/utils.hpp"
 
 // This method runs the client, monitoring the tcp connection socket and stdin fd using the poll
 // system call.

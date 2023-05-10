@@ -3,7 +3,7 @@
 #include <sys/socket.h>
 #include <iostream>
 
-#include "../Utils/utils.hpp"
+#include "../utils/utils.hpp"
 #include "user.hpp"
 
 using namespace std;
