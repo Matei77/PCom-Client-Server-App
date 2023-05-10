@@ -8,7 +8,7 @@ data from both tcp and udp clients.
 
 The tcp clients can subscribe/unsubscribe to/from topics and, when the server
 receives a message from a udp client with a topic that the tcp client is
-subscribed to, the server will send the message to the tcp client. 
+subscribed to, the server will send the message to the tcp client.
 
 ## Server
 The `Server` class contains the users database, the port the server is opened
@@ -66,6 +66,8 @@ server as "stopic_name1".
 Buffering is disabled using `setvbuf(stdout, NULL, _IONBF, BUFSIZ);`.
 
 Nagle algorithm is turned off for the server's and client's tcp sockets.
+
+The implementation pass all the tests on the checker.
 
 ## References
 
