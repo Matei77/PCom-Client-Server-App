@@ -63,7 +63,8 @@ For example the client command "subscribe topic_name 1" will be sent to the
 server as "stopic_name1".
 
 ## Mentions
-Buffering is disabled using `setvbuf(stdout, NULL, _IONBF, BUFSIZ);`
+Buffering is disabled using `setvbuf(stdout, NULL, _IONBF, BUFSIZ);`.
+
 Nagle algorithm is turned off for the server's and client's tcp sockets.
 
 ## References
