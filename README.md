@@ -67,7 +67,7 @@ Buffering is disabled using `setvbuf(stdout, NULL, _IONBF, BUFSIZ);`.
 
 Nagle algorithm is turned off for the server's and client's tcp sockets.
 
-The implementation pass all the tests on the checker.
+The implementation passed all the tests on the checker.
 
 ## References
 
