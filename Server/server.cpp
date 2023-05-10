@@ -337,7 +337,7 @@ void Server::ProcessClientRequest(pollfd &poll_fd) {
 		// subscribe user to topic
 		string topic = buffer.substr(1, rc - 3);
 		bool sf = atoi(&buffer[rc - 2]);
-		cout << "sf:" << sf;
+		// cout << "sf:" << sf;
 
 		// ? --------->>>>> needs Setter?
 		user.second.GetSubbedTopic().insert({topic, sf});
