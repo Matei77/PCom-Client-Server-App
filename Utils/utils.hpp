@@ -13,8 +13,6 @@ uint32_t recv_all(int sockfd, void *buffer, uint32_t max_len);
 
 uint32_t send_all(int sockfd, void *buffer, uint32_t len);
 
-uint32_t recv_udp(int sockfd, void *buffer, uint32_t len, sockaddr_in& udp_client_addr, socklen_t& udp_client_len);
-
 // macro for handling error codes
 #define DIE(assertion, call_description)                                       \
 	do {                                                                       \

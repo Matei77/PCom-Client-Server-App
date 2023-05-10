@@ -22,10 +22,13 @@ class User {
 		queue<string> queued_messages;
 
 	public:
+		// constructor
 		User(int fd, bool online);
 
+		// send or store the message if the user is subscribed to topic
 		void NotifyUser(string topic, string message);
 
+		// send queued messages
 		void ReconnectUser();
 
 		// Getters and Setters

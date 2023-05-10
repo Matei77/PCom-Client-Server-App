@@ -27,18 +27,24 @@ class Subscriber {
 		vector<pollfd> poll_fds;
 
 	public:
+		// constructor
 		Subscriber(string id, string server_ip, uint16_t server_port);
 
+		// start and run tcp client
 		void RunClient();
 
 	private:
+		// establish connection to the server
 		void ConnectToServer();
 
+		// process the message received from the server
 		void ProcessServerMessage();
 		
+		// process the command given by the user via stdin
 		bool ProcessStdinCommand();
 };
 
+// constructor for Subscriber class
 inline Subscriber::Subscriber(string id, string server_ip, uint16_t server_port) {
 	this->id = id;
 	this->server_ip = server_ip;

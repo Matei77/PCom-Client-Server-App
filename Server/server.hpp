@@ -57,12 +57,17 @@ class Server {
 		// returns 1 if the server should stop
 		bool ProcessStdinCommand();
 
+		// process the data sent by the tcp client
 		void ProcessClientRequest(pollfd &poll_fd);
-
-		pair<string, User&> FindUserByFd(int fd);
 
 		// close the server
 		void ExitServer();
+		
+		// find user by its file descriptor
+		pair<string, User&> FindUserByFd(int fd);
+
+		// generate the message that the tcp clients will receive if they are subscribed to the topic
+		string GenerateMessage(string topic, uint8_t data_type,	string content, sockaddr_in udp_client_addr);
 };
 
 // constructor for Server class

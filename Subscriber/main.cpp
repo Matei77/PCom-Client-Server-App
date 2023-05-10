@@ -19,9 +19,10 @@ int main(int argc, char *argv[]) {
 	int rc = sscanf(argv[3], "%hu", &port);
 	DIE(rc != 1, "Given port is invalid");
 
-
+	// create new subscriber
 	Subscriber subscriber(argv[1], argv[2], port);
 
+	// run tcp client
 	subscriber.RunClient();
 
 	return 0;
