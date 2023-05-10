@@ -168,6 +168,9 @@ void Server::ProcessNewTcpConnection() {
 			user.SetFd(client_fd);
 
 			// reconnect user
+			bool ans = 1;
+			send_all(client_fd, &ans, sizeof(bool));
+
 			user.ReconnectUser();
 		}
 
@@ -176,17 +179,17 @@ void Server::ProcessNewTcpConnection() {
 		User user(client_fd, true);
 		users_database.insert({client_id, user});
 		// cout << "[DEBUG] inserted user to database: " << client_id << " - " << user.GetFd() << endl;
+
+		bool ans = 1;
+		send_all(client_fd, &ans, sizeof(bool));
 	}
+
+	// add the new client to the poll
+	poll_fds.push_back({client_fd, POLLIN, 0});
 
 	// show message for new and reconnected users
 	printf("New client %s connected from %s:%d.\n", client_id.c_str(),
 			inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
-	
-	bool ans = 1;
-	send_all(client_fd, &ans, sizeof(bool));
-
-	// add the new client to the poll
-	poll_fds.push_back({client_fd, POLLIN, 0});
 }
 
 void Server::ProcessUdpData() {
@@ -284,7 +287,7 @@ void Server::ProcessUdpData() {
 
 
 	// notify users
-	for (auto user : users_database) {
+	for (auto & user : users_database) {
 		user.second.NotifyUser(topic, message);
 	}
 
